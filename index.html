@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Aruba Corporate Secure Exam</title>
+
+<script src="questions.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body{font-family:"Segoe UI",Arial,sans-serif;background:linear-gradient(to right,#e8f5e9,#f4f6f7);margin:0;}
+.login-container{width:420px;margin:120px auto;background:white;padding:40px;border-radius:12px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.1);}
+.login-container input{width:100%;padding:10px;margin:12px 0;font-size:16px;}
+.login-container button{padding:12px 30px;font-size:16px;background:#27ae60;color:white;border:none;border-radius:6px;cursor:pointer;}
+.container{width:80%;margin:60px auto;background:white;padding:60px;border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,0.08);position:relative;min-height:650px;}
+#timer{position:absolute;top:25px;right:40px;font-size:26px;font-weight:bold;}
+.progress-bar{width:100%;height:15px;background:#ddd;border-radius:10px;margin-top:20px;}
+.progress-fill{height:100%;width:0%;background:#27ae60;border-radius:10px;transition:.3s;}
+.option{margin:14px 0;font-size:20px;}
+input[type="radio"]{transform:scale(1.5);margin-right:10px;}
+.button-container{position:absolute;bottom:40px;right:40px;}
+button{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;}
+#prevBtn{background:#95a5a6;color:white;}
+#nextBtn{background:#27ae60;color:white;}
+.warning-box{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#c0392b;color:white;padding:12px 25px;border-radius:8px;z-index:9999;}
+</style>
+
+</head>
+
+<body>
+<div id="app"></div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+let userData={},attemptID="ATT-"+Math.floor(Math.random()*1000000),
+examDate=new Date().toLocaleString();
+
+const TOTAL_QUESTIONS=40;
+const EXAM_TIME=60*60;
+
+let selectedQuestions=[],currentQuestion=0,userAnswers=[],
+timeLeft=EXAM_TIME,timerInterval,navigationLocked=false,topicStats={};
+
+function renderLogin(){
+document.getElementById("app").innerHTML=`
+<div class="login-container">
+<h2>Corporate Exam Login</h2>
+<input id="name" placeholder="Full Name">
+<input id="company" placeholder="Company">
+<input id="email" placeholder="Email">
+<button onclick="startExam()">Start Exam</button>
+</div>`;}
+
+function startExam(){
+if(typeof questionBank==="undefined"){
+alert("Questions file not loaded.");
+return;
+}
+userData.name=document.getElementById("name").value.trim();
+userData.company=document.getElementById("company").value.trim();
+userData.email=document.getElementById("email").value.trim();
+if(!userData.name||!userData.company||!userData.email){
+alert("Complete all fields.");return;}
+selectedQuestions=questionBank.sort(()=>Math.random()-0.5)
+.slice(0,TOTAL_QUESTIONS);
+renderExam();startTimer();}
+
+function renderExam(){
+document.getElementById("app").innerHTML=`
+<div class="container">
+<h2>Aruba Certification Exam</h2>
+<div id="timer"></div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+<div id="question-container" style="margin-top:30px;"></div>
+<div class="button-container">
+<button id="prevBtn" onclick="previousQuestion()">Previous</button>
+<button id="nextBtn" onclick="nextQuestion()">Next</button>
+</div></div>`;
+showQuestion();}
+
+function showQuestion(){
+updateProgress();
+const q=selectedQuestions[currentQuestion];
+let html=`<h3>Question ${currentQuestion+1} of ${TOTAL_QUESTIONS}</h3>
+<p>${q.question}</p>`;
+q.options.forEach((opt,i)=>{
+html+=`<div class="option">
+<input type="radio" name="option" value="${i}"> ${opt}
+</div>`;});
+document.getElementById("question-container").innerHTML=html;}
+
+function saveAnswer(){
+const options=document.getElementsByName("option");
+let selected=-1;
+options.forEach(opt=>{
+if(opt.checked)selected=parseInt(opt.value);});
+userAnswers[currentQuestion]=selected;}
+
+function nextQuestion(){
+saveAnswer();
+if(currentQuestion===TOTAL_QUESTIONS-1){
+finishExam();return;}
+currentQuestion++;showQuestion();}
+
+function previousQuestion(){
+if(navigationLocked)return;
+if(currentQuestion>0){currentQuestion--;showQuestion();}}
+
+function updateProgress(){
+document.getElementById("progressFill").style.width=
+(currentQuestion/TOTAL_QUESTIONS*100)+"%";}
+
+function penalizeQuestion(){
+userAnswers[currentQuestion]=-1;
+navigationLocked=true;
+document.getElementById("prevBtn").disabled=true;
+const warning=document.createElement("div");
+warning.className="warning-box";
+warning.innerText="⚠ Security violation detected.";
+document.body.appendChild(warning);
+setTimeout(()=>warning.remove(),2000);
+if(currentQuestion<TOTAL_QUESTIONS-1){
+currentQuestion++;showQuestion();}
+else{finishExam();}}
+
+document.addEventListener("keydown",function(e){
+if(e.ctrlKey&&["c","a","u","p"].includes(e.key.toLowerCase())){
+e.preventDefault();penalizeQuestion();}
+if(e.key==="F12"){e.preventDefault();penalizeQuestion();}
+if(e.key==="PrintScreen"){penalizeQuestion();}});
+
+document.addEventListener("keyup",function(e){
+if(e.key==="PrintScreen"){penalizeQuestion();}});
+
+document.addEventListener("contextmenu",function(e){
+e.preventDefault();penalizeQuestion();});
+
+function startTimer(){
+timerInterval=setInterval(()=>{
+timeLeft--;
+let m=Math.floor(timeLeft/60),
+s=timeLeft%60;
+document.getElementById("timer").innerText=
+(m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+if(timeLeft<=0){
+clearInterval(timerInterval);
+finishExam();}},1000);}
+
+function finishExam(){
+clearInterval(timerInterval);
+let score=0;
+topicStats={};
+selectedQuestions.forEach((q,i)=>{
+if(!topicStats[q.topic])
+topicStats[q.topic]={correct:0,total:0};
+topicStats[q.topic].total++;
+if(userAnswers[i]===q.correct){
+score++;topicStats[q.topic].correct++;}
+
+});
+
+let finalScore = score/TOTAL_QUESTIONS*100;
+
+fetch("https://¨https://script.google.com/macros/s/AKfycbw2s_-_mRSXWHlHkYvC3CaTUYW9EZmRhDuta308oJJq1c3z8Sbpq6FKPbATBVlJ18yHDg/exec",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+name:userData.name,
+company:userData.company,
+email:userData.email,
+score:finalScore,
+attempt:attemptID,
+date:examDate
+})
+});
+
+renderResults(finalScore);
+
+}
+
+function renderResults(score){
+let topicHTML="";
+for(let topic in topicStats){
+let t=topicStats[topic];
+topicHTML+=`<div style="margin:10px 0;font-size:22px;">
+${topic}: ${((t.correct/t.total)*100).toFixed(1)}%
+(${t.correct}/${t.total})
+</div>`;}
+document.getElementById("app").innerHTML=`
+<div style="width:100%;min-height:100vh;display:flex;
+flex-direction:column;justify-content:center;
+align-items:center;text-align:center;
+background:linear-gradient(to right,#e8f5e9,#f4f6f7);
+padding:40px;">
+<h1 style="font-size:48px;margin-bottom:20px;">
+Exam Results</h1>
+<div style="font-size:110px;font-weight:bold;
+color:#145a32;margin-bottom:30px;">
+${score.toFixed(2)}%</div>
+<div style="font-size:28px;margin-bottom:15px;">
+Performance by Topic</div>
+${topicHTML}
+<button style="margin-top:40px;padding:18px 40px;
+font-size:22px;background:#145a32;color:white;
+border:none;border-radius:8px;cursor:pointer;"
+onclick="exportPDF(${score})">
+Export Results to PDF</button>
+</div>`;}
+
+function exportPDF(score){
+const doc=new jsPDF();
+doc.text("Aruba Corporate Exam Report",20,20);
+doc.text("Final Score: "+score.toFixed(2)+"%",20,40);
+doc.save("Corporate_Exam_Report.pdf");}
+
+renderLogin();
+</script>
+
+</body>
+</html>
