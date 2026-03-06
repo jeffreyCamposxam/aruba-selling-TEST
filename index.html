@@ -164,20 +164,27 @@ score++;topicStats[q.topic].correct++;}
 
 let finalScore = score/TOTAL_QUESTIONS*100;
 
-const formData = new FormData();
+const form = document.createElement("form");
+form.method = "POST";
+form.action = "https://script.google.com/macros/s/AKfycbw2s_-_mRSXWHlHkYvC3CaTUYW9EZmRhDuta308oJJq1c3z8Sbpq6FKPbATBVlJ18yHDg/exec";
 
-formData.append("name", userData.name);
-formData.append("company", userData.company);
-formData.append("email", userData.email);
-formData.append("score", finalScore);
-formData.append("attempt", attemptID);
-formData.append("date", examDate);
+function addField(name,value){
+const input=document.createElement("input");
+input.type="hidden";
+input.name=name;
+input.value=value;
+form.appendChild(input);
+}
 
-fetch("https://script.google.com/macros/s/AKfycbw2s_-_mRSXWHlHkYvC3CaTUYW9EZmRhDuta308oJJq1c3z8Sbpq6FKPbATBVlJ18yHDg/exec",{
-method:"POST",
-mode:"no-cors",
-body: formData
-});
+addField("name",userData.name);
+addField("company",userData.company);
+addField("email",userData.email);
+addField("score",finalScore);
+addField("attempt",attemptID);
+addField("date",examDate);
+
+document.body.appendChild(form);
+form.submit();
 
 renderResults(finalScore);
 
@@ -224,6 +231,7 @@ renderLogin();
 </body>
 </html>
 <!-- deploy -->
+
 
 
 
