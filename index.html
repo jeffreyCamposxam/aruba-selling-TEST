@@ -164,18 +164,20 @@ score++;topicStats[q.topic].correct++;}
 
 let finalScore = score/TOTAL_QUESTIONS*100;
 
+const formData = new FormData();
+
+formData.append("name", userData.name);
+formData.append("company", userData.company);
+formData.append("email", userData.email);
+formData.append("score", finalScore);
+formData.append("attempt", attemptID);
+formData.append("date", examDate);
+
 fetch("https://script.google.com/macros/s/AKfycbw2s_-_mRSXWHlHkYvC3CaTUYW9EZmRhDuta308oJJq1c3z8Sbpq6FKPbATBVlJ18yHDg/exec",{
 method:"POST",
 mode:"no-cors",
-body:JSON.stringify({
-name:userData.name,
-company:userData.company,
-email:userData.email,
-score:finalScore,
-attempt:attemptID,
-date:examDate
-})
-}).catch(err => console.log(err));
+body: formData
+});
 
 renderResults(finalScore);
 
@@ -222,5 +224,6 @@ renderLogin();
 </body>
 </html>
 <!-- deploy -->
+
 
 
